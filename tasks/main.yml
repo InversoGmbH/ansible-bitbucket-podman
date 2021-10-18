@@ -1,0 +1,63 @@
+---
+# tasks file for inverso.bitbucket-docker
+
+- name: check required variables
+  assert:
+    that:
+      - bitbucket_data_dir                 | mandatory
+      - bitbucket_version                  | mandatory
+      - bitbucket_jvm_min_mem              | mandatory
+      - bitbucket_jvm_max_mem              | mandatory
+      - bitbucket_support_recommended_args | mandatory
+      - bitbucket_servername               | mandatory
+      - bitbucket_volumes                  | mandatory
+      - bitbucket_env                      | mandatory
+      - bitbucket_service_enabled          in ['yes','no']
+      - bitbucket_image_pull               in ['yes','no']
+  tags: ['varcheck']
+
+- name: create bitbucket data dir on docker host
+  file:
+    path: '{{ bitbucket_data_dir }}'
+    state: directory
+
+- name: ensure system cacerts file is also present for bitbucket
+  copy:
+    src: '/etc/pki/java/cacerts'
+    dest: '{{ bitbucket_data_dir }}/'
+    remote_src: yes
+
+- name: pull bitbucket image
+  podman_image:
+    name: "{{ bitbucket_image_registry }}{{ bitbucket_image_registry | ternary('/','') }}{{ bitbucket_image_name }}:{{ bitbucket_version }}"
+  when: bitbucket_image_pull in ['yes']
+
+- name: create bitbucket container
+  podman_container:
+    name: 'bitbucket'
+    hostname: 'bitbucket'
+    image: "{{ bitbucket_image_registry }}{{ bitbucket_image_registry | ternary('/','') }}{{ bitbucket_image_name }}:{{ bitbucket_version }}"
+    state: "{{ (bitbucket_service_enabled == 'yes') | ternary('started','stopped') }}"
+    restart_policy: on-failure
+    network_mode: host
+    volumes: '{{ bitbucket_volumes }}'
+    env: '{{ bitbucket_env }}'
+  register: _status_bitbucket_container
+
+- name: ensure systemd service file is generated
+  command: podman generate systemd -t 10 --restart-policy=always -n "bitbucket" -f
+  args:
+    chdir: /etc/systemd/system
+  register: _status_bitbucket_service_file
+  when: _status_bitbucket_container is changed
+
+- name: ensure bitbucket service is updated and enabled
+  systemd:
+    name: container-bitbucket
+    daemon_reload: yes
+    enabled: yes
+  when: _status_bitbucket_service_file is changed
+
+#- name: ensure unused images are absent
+#  command: podman image prune -fa
+#  when: _return_container is changed

@@ -1,0 +1,67 @@
+---
+# defaults file for inverso.bitbucket-docker
+
+bitbucket_data_dir              : '/var/bitbucket'
+bitbucket_servername            : 'bitbucket'
+bitbucket_version               : '5.16.0'
+bitbucket_image_registry        : ''
+bitbucket_image_name            : 'atlassian/bitbucket-server'
+bitbucket_image_pull            : 'no'
+
+bitbucket_service_enabled       : 'yes'
+
+bitbucket_jvm_min_mem           : '2048m'
+bitbucket_jvm_max_mem           : '3072m'
+bitbucket_webappcontextpath     : '/bitbucket'
+
+bitbucket_proxy_configure       : False
+bitbucket_proxy_name            : 'corporate-proxy'
+bitbucket_proxy_port            : '8080'
+bitbucket_proxy_nonProxyHosts   : 'localhost\|127.0.0.1\|{{ ansible_default_ipv4.address }}'
+
+# todo implement jmx
+# bitbucket jmx settings
+# 
+# bitbucket_jmx_configure                : no # yes | no | absent
+# bitbucket_jmx_user                     : '{{ bitbucket_user }}' # will be also the jmx password
+# bitbucket_jmx_port                     : 8099
+# bitbucket_jmx_args                     : '-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port={{ bitbucket_jmx_port }} -Dcom.sun.management.jmxremote.authenticate=true -Dcom.sun.management.jmxremote.password.file=/home/{{ bitbucket_jmx_user }}/jmxremote.password -Dcom.sun.management.jmxremote.access.file=/home/{{ bitbucket_jmx_user }}/jmxremote.access -Dcom.sun.management.jmxremote.ssl=false'
+
+bitbucket_support_recommended_args: |
+  -Duser.timezone=Europe/Berlin
+  -Duser.region=DE
+  -Duser.country=DE
+  -Duser.language=de
+  -Djavax.net.ssl.trustStore=/var/atlassian/application-data/bitbucket/cacerts
+  -Dbitbucket.context.path={{ bitbucket_webappcontextpath }}
+  -Djdk.tls.trustNameService=true
+  -Djavax.net.ssl.keyStore=/var/atlassian/application-data/bitbucket/cacerts
+#  -Dfile.encoding=UTF-8
+#  -Dhttp.proxyHost={{ bitbucket_proxy_name }} -Dhttp.proxyPort={{ bitbucket_proxy_port }} 
+#  -Dhttp.nonProxyHosts={{ bitbucket_proxy_nonProxyHosts }}
+#  -Dhttps.proxyHost={{ bitbucket_proxy_name }} -Dhttps.proxyPort={{ bitbucket_proxy_port }} 
+#  -Dhttps.nonProxyHosts={{ bitbucket_proxy_nonProxyHosts }}
+
+bitbucket_volumes_default:
+  - '{{ bitbucket_data_dir }}:/var/atlassian/application-data/bitbucket'
+
+bitbucket_volumes: '{{ bitbucket_volumes_default }}'
+
+bitbucket_env_default:
+  LANG: 'de_DE.utf8'
+  JVM_MINIMUM_MEMORY: '{{ bitbucket_jvm_min_mem }}'
+  JVM_MAXIMUM_MEMORY: '{{ bitbucket_jvm_max_mem }}'
+  JVM_SUPPORT_RECOMMENDED_ARGS: "{{ bitbucket_support_recommended_args | replace('\n',' ') }}"
+  CATALINA_CONTEXT_PATH: '{{ bitbucket_webappcontextpath }}'
+  SERVER_CONTEXT_PATH: '{{ bitbucket_webappcontextpath }}'
+  SERVER_SECURE: '{{ bitbucket_revproxy_secure }}'
+  SERVER_SCHEME: '{{ bitbucket_revproxy_scheme }}'
+  SERVER_PROXY_PORT: '{{ bitbucket_revproxy_port }}'
+  SERVER_PROXY_NAME: '{{ bitbucket_revproxy_name }}'
+
+bitbucket_env: '{{ bitbucket_env_default }}'
+
+bitbucket_revproxy_name         : '{{ bitbucket_servername }}'
+bitbucket_revproxy_port         : '443'
+bitbucket_revproxy_scheme       : 'https'
+bitbucket_revproxy_secure       : 'true'
