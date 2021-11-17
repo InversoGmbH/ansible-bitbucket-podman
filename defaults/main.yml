@@ -65,3 +65,5 @@ bitbucket_revproxy_name         : '{{ bitbucket_servername }}'
 bitbucket_revproxy_port         : '443'
 bitbucket_revproxy_scheme       : 'https'
 bitbucket_revproxy_secure       : 'true'
+
+bitbucket_log_driver            : 'journald'

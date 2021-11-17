@@ -29,8 +29,10 @@
 
 - name: pull bitbucket image
   podman_image:
-    name: "{{ bitbucket_image_registry }}{{ bitbucket_image_registry | ternary('/','') }}{{ bitbucket_image_name }}:{{ bitbucket_version }}"
-  when: bitbucket_image_pull in ['yes']
+    name: "{{ bitbucket_image_registry }}{{ bitbucket_image_registry | ternary('/','') }}{{ bitbucket_image_name }}"
+    tag: "{{ bitbucket_version }}"
+    force: "{{ bitbucket_image_pull | default('no') }}"
+  register: _state_podman_image
 
 - name: create bitbucket container
   podman_container:
@@ -38,11 +40,15 @@
     hostname: 'bitbucket'
     image: "{{ bitbucket_image_registry }}{{ bitbucket_image_registry | ternary('/','') }}{{ bitbucket_image_name }}:{{ bitbucket_version }}"
     state: "{{ (bitbucket_service_enabled == 'yes') | ternary('started','stopped') }}"
+    recreate: "{{ _recreate_container | default('no') }}"
     restart_policy: on-failure
     network_mode: host
     volumes: '{{ bitbucket_volumes }}'
     env: '{{ bitbucket_env }}'
+    log_driver: '{{ bitbucket_log_driver }}'
   register: _status_bitbucket_container
+  vars:
+    _recreate_container: "{{ _state_podman_image is changed | ternary('yes','no') }}"
 
 - name: ensure systemd service file is generated
   command: podman generate systemd -t 10 --restart-policy=always -n "bitbucket" -f
